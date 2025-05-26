@@ -1,23 +1,58 @@
-// biome-ignore lint: disable decorators
 import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common'
+import type { Response } from 'express'
+// biome-ignore lint/style/useImportType: <explanation>
+import { AiService } from '../ai/ai.service.js'
 // biome-ignore lint/style/useImportType: <explanation>
 import { WebhooksService } from './webhooks.service.js'
-import type { Response } from 'express'
+
+const Messages = new Map()
+
+type Message = {
+  id: string
+  from: string
+  timestamp: number
+  text: {
+    body: string
+  }
+  type: 'text'
+}
 
 @Controller('webhooks')
 export class WebhooksController {
-  constructor(private readonly webhooksService: WebhooksService) {}
+  constructor(
+    private readonly webhooksService: WebhooksService,
+    private readonly aiService: AiService
+  ) {}
 
   @Post('/whatsapp')
   async receiveMessage(@Body() body, @Res() res: Response) {
-    console.log('Mensaje recibido:', body)
+    const { value, field } = body.entry[0].changes[0]
+    if (value?.messages) {
+      const { contacts, messages } = value
 
-    // Aquí puedes procesar y responder al mensaje
+      const message = messages[0] as Message
 
-    const result = await this.webhooksService.handleSendMessageWhatsAppWebhook()
+      console.log({ value, field }, contacts, messages)
 
-    console.log({ result })
-    res.status(200).send()
+      const previousMessages = Messages.get(message.from)
+
+      Messages.set(message.from, previousMessages)
+
+      // Aquí puedes procesar y responder al mensaje
+
+      const result = await this.aiService.generateContent({
+        contents: message.text.body,
+      })
+
+      if (!result) return
+
+      await this.webhooksService.handleSendMessageWhatsAppWebhook({
+        to: message.from,
+        body: result,
+      })
+
+      res.status(200).send()
+    }
   }
 
   @Get('/whatsapp')

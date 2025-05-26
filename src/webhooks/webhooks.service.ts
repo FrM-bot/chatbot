@@ -24,18 +24,22 @@ export class WebhooksService {
     }
   }
 
-  async handleSendMessageWhatsAppWebhook() {
+  async handleSendMessageWhatsAppWebhook({
+    to,
+    body,
+  }: {
+    to: string
+    body: string
+  }) {
     const { data } = await axios.post(
       Services.whatsapp.url,
       {
         messaging_product: 'whatsapp',
-        to: '',
-        type: 'template',
-        template: {
-          name: 'hello_world',
-          language: {
-            code: 'en_US',
-          },
+        recipient_type: 'individual',
+        to,
+        type: 'text',
+        text: {
+          body,
         },
       },
       {
