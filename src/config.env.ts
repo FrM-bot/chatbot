@@ -20,7 +20,7 @@ const schema = object({
   }),
   // Variables de entorno del servidor
   NODE_ENV: string().default('development'),
-  PORT: number().default(3000),
+  PORT: preprocess((val) => Number(val), number().int().default(3000)),
   GEMINI_API_KEY: string().min(1, {
     message: 'GEMINI_API_KEY es requerido',
   }),
